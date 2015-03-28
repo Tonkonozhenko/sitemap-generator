@@ -17,14 +17,14 @@ class ParserWorker
 
   sidekiq_options backtrace: true
 
-  def perform(url, parent = nil, level = 1)
+  def perform(url, parent = url, level = 1)
     url = normalize_path(url)
     get_domain(url)
 
     unless visited?(url)
       visit!(url)
       add_to_parent(url, parent)
-      parse_page_links(level, url) if level < LEVEL
+      parse_page_links(level, url, parent) if level < LEVEL
     end
   end
 
@@ -36,7 +36,7 @@ class ParserWorker
 
   # Normalizes relative and absolute urls
   def normalize(url)
-    return if url.nil? || url.index('mailto') == 0
+    return if url.nil? || %w[mailto: javascript: skype:].any? { |e| url.index(e) == 0 }
 
     begin
       url.gsub!(/\s/, '')
@@ -58,7 +58,7 @@ class ParserWorker
   # Saving results to redis
   def add_to_parent(link, parent)
     if parent && link.to_s != parent.to_s
-      $redis.rpush(children_key(parent), link)
+      $redis.sadd(children_key(parent), link)
     end
   end
 
@@ -72,13 +72,13 @@ class ParserWorker
     $redis.set(visited_key(url), true)
   end
 
-  def parse_page_links(level, url)
+  def parse_page_links(level, url, parent)
     # Can not parse habr without user agent
     doc = Nokogiri::HTML(open(url, HEADERS))
 
     doc.css('a').each do |link|
       link = normalize(link.attr('href'))
-      self.class.perform_async(link, url, level + 1) if link && valid?(link)
+      self.class.perform_async(link, parent, level + 1) if link && valid?(link)
     end
   end
 end
