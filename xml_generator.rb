@@ -12,36 +12,20 @@ class XmlGenerator
 
   def data(url)
     index = 0
-    results = []
+    results = [{
+                 'loc' => url.to_s,
+                 'priority' => 1.0
+               }]
     begin
       res = $redis.sscan children_key(url), index#, match: match
-      res[1].each do |key|
-        results << key
+      res[1].each do |u|
+        results << JSON.parse(u)
       end
       index = res[0]
     end while index != '0'
     results
   end
 
-  # def initialize(url)
-  #   @counter = 0
-  #   @data = data(url)
-  #   self
-  # end
-  #
-  # def data(url)
-  #   {
-  #     url: url,
-  #     children: children(url)
-  #   }
-  # end
-  #
-  # def children(url)
-  #   children = $redis.lrange(children_key(url), 0, -1)
-  #   children.delete(url)
-  #   children.map { |u| data(u) }
-  # end
-  #
   def as_json
     @data
   end
