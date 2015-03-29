@@ -1,4 +1,4 @@
 /.idea
 sidekiq.log
 .env
-
+/public/schemas

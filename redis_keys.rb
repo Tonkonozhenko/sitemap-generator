@@ -7,4 +7,8 @@ module RedisKeys
   def visited_key(url)
     "visited:#{url}"
   end
+
+  def counter_key(url)
+    "counter:#{url}"
+  end
 end

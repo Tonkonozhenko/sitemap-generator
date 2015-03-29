@@ -1,6 +1,12 @@
 doctype html
 html
   head
-    title Test
+    title UWC Semifinal
   body
-    a(href="/index2") Index2
+    - @domains.each do |d|
+      p
+        = "Domain: #{d[:url]}"
+        br
+        = "Finished: #{d[:finished]}"
+        - if d[:finished]
+          a< href="#{d[:download_link]}" (Download)

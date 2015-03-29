@@ -27,11 +27,19 @@ GEM
       thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
     backports (3.6.4)
+    better_errors (2.1.1)
+      coderay (>= 1.0.0)
+      erubis (>= 2.6.6)
+      rack (>= 0.9.0)
+    binding_of_caller (0.7.2)
+      debug_inspector (>= 0.0.1)
     builder (3.2.2)
     celluloid (0.16.0)
       timers (~> 4.0.0)
+    coderay (1.1.0)
     connection_pool (2.1.1)
     daemons (1.1.9)
+    debug_inspector (0.0.2)
     dotenv (2.0.0)
     erubis (2.7.0)
     eventmachine (1.0.7)
@@ -74,6 +82,7 @@ GEM
     rest-client (1.7.3)
       mime-types (>= 1.16, < 3.0)
       netrc (~> 0.7)
+    rubyzip (1.1.7)
     sidekiq (3.3.2)
       celluloid (>= 0.16.0)
       connection_pool (>= 2.1.1)
@@ -112,6 +121,8 @@ PLATFORMS
 
 DEPENDENCIES
   activesupport
+  better_errors
+  binding_of_caller
   dotenv
   hiredis
   nokogiri
@@ -120,6 +131,7 @@ DEPENDENCIES
   rake
   redis
   rest-client
+  rubyzip
   sidekiq
   sinatra
   sinatra-contrib

@@ -21,25 +21,31 @@ class ParserWorker
   sidekiq_options backtrace: true
 
   def perform(url, parent = url, level = 1)
-    url = normalize_path(url)
-    get_domain(url)
+    @url = url
+    @parent = parent
+    @level = level
 
-    unless visited?(url)
+    @url = normalize_path(@url)
+    get_domain
+
+    unless visited?
       # Can not parse habr without user agent
-      doc = download_page(url)
+      doc = download_page
 
       if doc
-        visit!(url)
+        visit!
         last_modified = Time.parse(doc.headers[:last_modified]).strftime('%Y-%m-%dT%H:%M:%S%:z') rescue nil
-        add_to_parent(parent, url, last_modified)
-        parse_page_links(doc.body, level, parent) if level < LEVEL
+        add_to_parent(last_modified)
+        parse_page_links(doc.body) if @level < LEVEL
       end
     end
+
+    generate_sitemap
   end
 
-  def download_page(url)
+  def download_page
     begin
-      RestClient.get(url.to_s, HEADERS)
+      RestClient.get(@url.to_s, HEADERS)
     rescue RestClient::Exception => ex
       # ignore if page status code == 4**
       raise unless ex.http_code / 100 == 4
@@ -49,8 +55,8 @@ class ParserWorker
 
   private
   # Gets current domain
-  def get_domain(url)
-    @domain ||= normalize_domain(url)
+  def get_domain
+    @domain ||= normalize_domain(@url)
   end
 
   # Normalizes relative and absolute urls
@@ -77,29 +83,39 @@ class ParserWorker
   end
 
   # Saving results to redis
-  def add_to_parent(parent, link, lastmod = nil, changefreq = nil, priority = nil)
-    if parent && link.to_s != parent.to_s
+  def add_to_parent(lastmod = nil, changefreq = nil, priority = nil)
+    if @parent && @url.to_s != @parent.to_s
       $redis.sadd(
-        children_key(parent),
-        { loc: link, lastmod: lastmod, changefreq: changefreq, priority: priority }.reject { |_, v| v.nil? }.to_json
+        children_key(@parent),
+        { loc: @url, lastmod: lastmod, changefreq: changefreq, priority: priority }.reject { |_, v| v.nil? }.to_json
       )
     end
   end
 
   # Check that page was visited
-  def visited?(url)
-    $redis.get(visited_key(url))
+  def visited?
+    $redis.get(visited_key(@url))
   end
 
   # Save to redis that page was visited
-  def visit!(url)
-    $redis.set(visited_key(url), true)
+  def visit!
+    $redis.set(visited_key(@url), true)
   end
 
-  def parse_page_links(doc, level, parent)
+  def parse_page_links(doc)
     Nokogiri::HTML(doc).css('a').each do |link|
       link = normalize(link.attr('href'))
-      self.class.perform_async(link, parent, level + 1) if link && valid?(link)
+      if link && valid?(link)
+        $redis.incr(counter_key(@parent))
+        self.class.perform_async(link, @parent, @level + 1)
+      end
+    end
+  end
+
+  def generate_sitemap
+    $redis.decr(counter_key(@parent))
+    if $redis.get(counter_key(@parent)).to_i == -1
+      XmlGenerator.new(@domain).to_zip(File.dirname(__FILE__) + "/public/schemas/#{@domain.host}.zip")
     end
   end
 end

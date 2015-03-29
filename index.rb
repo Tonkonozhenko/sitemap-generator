@@ -2,6 +2,7 @@ require 'sinatra/base'
 require 'sinatra/json'
 require 'sinatra/reloader'
 require 'slim'
+require 'better_errors'
 
 require_relative 'parser_worker'
 require_relative 'xml_generator'
@@ -10,9 +11,30 @@ require_relative 'url_utils'
 class SitemapApp < Sinatra::Base
   include UrlUtils
 
-  register Sinatra::Reloader
+  configure :development do
+    register Sinatra::Reloader
+    also_reload 'xml_generator.rb'
+
+    use BetterErrors::Middleware
+    BetterErrors.application_root = File.expand_path('.', __FILE__)
+  end
 
   get '/' do
+    XmlGenerator.new('http://getbootstrap.com').to_zip(File.dirname(__FILE__) + '/public/schemas/getbootstrap.com.zip')
+
+    @domains = $redis.keys('counter:*')
+    if @domains.any?
+      counters = $redis.mget($redis.keys('counter:*'))
+      @domains = @domains.each_with_index.map do |e, i|
+        url = e.split('counter:').last
+        domain = normalize_domain(url)
+
+        { url: url,
+          finished: counters[i].to_i == -1,
+          download_link: "/schemas/#{domain.host}.zip" }
+      end
+    end
+
     slim :index
   end
 
@@ -27,19 +49,6 @@ class SitemapApp < Sinatra::Base
 
   get '/find' do
     domain = normalize_domain(params[:domain])
-    data = XmlGenerator.new(domain).as_json
-
-    nokogiri do |xml|
-      xml.urlset(xmlns: 'http://www.sitemaps.org/schemas/sitemap/0.9') do
-        data.each do |d|
-          xml.url do
-            xml.loc(UrlUtils.escape_url(d['loc']))
-            xml.lastmod(d['lastmod']) if d['lastmod']
-            xml.changefreq(d['changefreq']) if d['changefreq']
-            xml.priority(d['priority']) if d['priority']
-          end
-        end
-      end
-    end
+    XmlGenerator.new(domain).to_xml
   end
 end
