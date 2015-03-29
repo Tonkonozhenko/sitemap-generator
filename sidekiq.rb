@@ -1,9 +1,11 @@
 require 'sidekiq'
 require 'dotenv'
+require 'json'
 
 Dotenv.load!
 
-hash = { host: ENV['REDIS_HOST'], port: ENV['REDIS_PORT'], db: ENV['REDIS_DB'], password: ENV['REDIS_PASSWORD'] }
+hash = { host: ENV['REDIS_HOST'], port: ENV['REDIS_PORT'], db: ENV['REDIS_DB'], password: ENV['REDIS_PASSWORD'] }.reject { |_, v| v.nil? || v == '' }
+
 Sidekiq.configure_server do |config|
   config.redis = hash
 end

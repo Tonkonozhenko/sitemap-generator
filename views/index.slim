@@ -2,11 +2,25 @@ doctype html
 html
   head
     title UWC Semifinal
+    script src="jquery.js"
+    script src="script.js"
   body
+    h2 Generate sitemap
+    form(action="/" method="post")
+      input(id="domain" name="domain")
+      input(type="submit")
+      br
+      small URL format: http://getbootstrap.com/
+    hr
+    h3 Currently working
+    a href="/sidekiq" Statistics
+    hr
+    h3 History
+    input(type="checkbox" id="autoreload") Autoreload (every 3 sec)
     - @domains.each do |d|
       p
         = "Domain: #{d[:url]}"
         br
-        = "Finished: #{d[:finished]}"
+        = "Finished: #{d[:finished] ? 'Yes' : 'No'}"
         - if d[:finished]
           a< href="#{d[:download_link]}" (Download)

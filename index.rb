@@ -30,7 +30,7 @@ class SitemapApp < Sinatra::Base
         domain = normalize_domain(url)
 
         { url: url,
-          finished: counters[i].to_i == -1,
+          finished: counters[i].to_i <= -1,
           download_link: "/schemas/#{domain.host}.zip" }
       end
     end
@@ -40,11 +40,8 @@ class SitemapApp < Sinatra::Base
 
   post '/' do
     domain = normalize_domain(params[:domain])
-    if domain
-      ParserWorker.perform_async(domain)
-    else
-      json status: error
-    end
+    ParserWorker.perform_async(domain) if domain
+    redirect '/'
   end
 
   get '/find' do

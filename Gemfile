@@ -1,9 +1,9 @@
 source 'https://rubygems.org'
 
 gem 'rake'
-gem 'rack', github: 'rack/rack'
+gem 'rack'
 gem 'dotenv'
-gem 'activesupport'
+
 gem 'sinatra'
 gem 'sinatra-contrib'
 gem 'thin'
